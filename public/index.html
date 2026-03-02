@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Docker Full CRUD Dashboard</title>
+    <style>
+        :root { --primary: #2563eb; --edit: #f59e0b; --danger: #ef4444; --bg: #f8fafc; }
+        body { font-family: 'Inter', sans-serif; background: var(--bg); padding: 20px; }
+        .container { max-width: 1100px; margin: 0 auto; }
+        .card { background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); margin-bottom: 20px; }
+        .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; }
+        .full { grid-column: 1 / -1; }
+        input, select, textarea { padding: 10px; border: 1px solid #cbd5e1; border-radius: 6px; }
+        
+        button { cursor: pointer; border: none; border-radius: 6px; font-weight: 600; padding: 10px; transition: 0.2s; }
+        .btn-save { background: var(--primary); color: white; width: 100%; font-size: 1rem; }
+        .btn-edit { background: #fef3c7; color: #92400e; margin-right: 5px; }
+        .btn-delete { background: #fee2e2; color: var(--danger); }
+        
+        table { width: 100%; border-collapse: collapse; margin-top: 15px; }
+        th { background: #f1f5f9; text-align: left; padding: 12px; color: #64748b; font-size: 0.8rem; }
+        td { padding: 12px; border-bottom: 1px solid #f1f5f9; font-size: 0.9rem; }
+        .badge { padding: 4px 8px; border-radius: 10px; font-size: 0.7rem; font-weight: bold; }
+        .active { background: #dcfce7; color: #166534; }
+        
+        #formTitle { color: var(--primary); margin-bottom: 15px; }
+        .id-display { font-size: 0.8rem; color: #94a3b8; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="card">
+        <h2 id="formTitle">🚀 Create New Record</h2>
+        <form id="userForm" class="form-grid">
+            <input type="hidden" name="id" id="userId">
+            
+            <div style="grid-column: span 1"><label class="id-display">ID: <span id="idLabel">NEW</span></label></div>
+            <input type="text" name="full_name" id="full_name" placeholder="Full Name" required class="full">
+            
+            <input type="date" name="birth_date" id="birth_date" required>
+            <input type="number" step="0.01" name="balance" id="balance" placeholder="Balance ($)" required>
+            <input type="time" name="registration_time" id="registration_time" required>
+            <input type="text" name="last_name_initial" id="last_name_initial" maxlength="1" placeholder="Initial" required>
+            
+            <select name="is_active" id="is_active">
+                <option value="on">Active</option>
+                <option value="off">Inactive</option>
+            </select>
+            <input type="number" name="experience_level" id="experience_level" placeholder="Experience" required>
+            <input type="number" name="entry_year" id="entry_year" placeholder="Year" required>
+            <input type="number" step="any" name="latitude" id="latitude" placeholder="Lat" required>
+            <input type="number" step="any" name="longitude" id="longitude" placeholder="Lng" required>
+            
+            <textarea name="biography" id="biography" placeholder="Biography..." class="full" rows="2" required></textarea>
+            
+            <button type="submit" id="submitBtn" class="btn-save full">Save Record</button>
+            <button type="button" id="cancelBtn" style="display:none;" onclick="resetForm()" class="full">Cancel Edit</button>
+        </form>
+    </div>
+
+    <div class="card">
+        <h2>📊 Database Management</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Name</th>
+                    <th>Balance</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody id="dataTable"></tbody>
+        </table>
+    </div>
+</div>
+
+<script>
+    let allData = [];
+
+    const loadData = async () => {
+        const res = await fetch('/api/users');
+        allData = await res.json();
+        document.getElementById('dataTable').innerHTML = allData.map(u => `
+            <tr>
+                <td>#${u.id}</td>
+                <td><strong>${u.full_name}</strong></td>
+                <td>$${u.balance}</td>
+                <td><span class="badge ${u.is_active ? 'active' : ''}">${u.is_active ? 'ACTIVE' : 'OFF'}</span></td>
+                <td>
+                    <button class="btn-edit" onclick="editUser(${u.id})">Edit</button>
+                    <button class="btn-delete" onclick="deleteUser(${u.id})">Delete</button>
+                </td>
+            </tr>
+        `).join('');
+    };
+
+    const editUser = (id) => {
+        const user = allData.find(u => u.id === id);
+        if (!user) return;
+
+        // Fill form fields
+        document.getElementById('userId').value = user.id;
+        document.getElementById('idLabel').innerText = user.id;
+        document.getElementById('full_name').value = user.full_name;
+        document.getElementById('birth_date').value = user.birth_date.split('T')[0];
+        document.getElementById('balance').value = user.balance;
+        document.getElementById('registration_time').value = user.registration_time;
+        document.getElementById('last_name_initial').value = user.last_name_initial;
+        document.getElementById('is_active').value = user.is_active ? 'on' : 'off';
+        document.getElementById('experience_level').value = user.experience_level;
+        document.getElementById('entry_year').value = user.entry_year;
+        document.getElementById('latitude').value = user.latitude;
+        document.getElementById('longitude').value = user.longitude;
+        document.getElementById('biography').value = user.biography;
+
+        // Change UI to Edit Mode
+        document.getElementById('formTitle').innerText = "edit Record";
+        document.getElementById('submitBtn').innerText = "Update Record";
+        document.getElementById('submitBtn').style.background = "#f59e0b";
+        document.getElementById('cancelBtn').style.display = "block";
+    };
+
+    const resetForm = () => {
+        document.getElementById('userForm').reset();
+        document.getElementById('userId').value = "";
+        document.getElementById('idLabel').innerText = "NEW";
+        document.getElementById('formTitle').innerText = "Create New Record";
+        document.getElementById('submitBtn').innerText = "Save Record";
+        document.getElementById('submitBtn').style.background = "#2563eb";
+        document.getElementById('cancelBtn').style.display = "none";
+    };
+
+    document.getElementById('userForm').onsubmit = async (e) => {
+        e.preventDefault();
+        const data = Object.fromEntries(new FormData(e.target).entries());
+        await fetch('/api/users', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+        });
+        resetForm();
+        loadData();
+    };
+
+    const deleteUser = async (id) => {
+        if(confirm('Delete permanently?')) {
+            await fetch(`/api/users/${id}`, { method: 'DELETE' });
+            loadData();
+        }
+    };
+
+    loadData();
+</script>
+</body>
+</html>
